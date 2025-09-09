@@ -1,35 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState } from "react";
+import Editor from "react-simple-code-editor";
+import Prism from "prismjs";
+import "prismjs/components/prism-javascript";
+import "prismjs/themes/prism-tomorrow.css";
+import ReactMarkdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github-dark.css"; // aur koi bhi theme use kar sakte ho
+import "./App.css";
+import axios from "axios";
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+  const [code, setCode] = useState(`function greet() {
+  console.log("Hello, World!");
+}`);
+
+  const [response, setResponse] = useState(
+    "AI review output will be shown here..."
+  );
+
+  async function handleGenerateReview() {
+    try {
+      const res = await axios.post("http://localhost:4000/ai/get-review", {
+        code,
+      });
+
+      if (res.data?.text) {
+        setResponse(res.data.text);
+      } else if (res.data?.response) {
+        setResponse(res.data.response);
+      } else {
+        setResponse("⚠️ No valid response from server");
+      }
+    } catch (err) {
+      console.error("Error fetching review:", err);
+      setResponse("❌ Failed to get AI review.");
+    }
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <main>
+      <div className="left">
+        <div className="code">
+          <h2>Your Code</h2>
+          <Editor
+            value={code}
+            onValueChange={(code) => setCode(code)}
+            highlight={(code) =>
+              Prism.highlight(code, Prism.languages.javascript, "javascript")
+            }
+            padding={12}
+            className="editor"
+          />
+        </div>
 
-export default App
+        <div className="buttons">
+          <button onClick={handleGenerateReview}>Generate Review</button>
+        </div>
+      </div>
+
+      <div className="right">
+        <h2>AI Response</h2>
+        <div className="response">
+          <ReactMarkdown rehypePlugins={[rehypeHighlight]}>
+            {response}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+export default App;
